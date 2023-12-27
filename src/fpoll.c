@@ -46,6 +46,7 @@ FPOLL_STATUS fpoll_add(struct fpoll *descriptor, FPOLL_EVENT events, FPOLL_FD fi
   for(i = 0 ; i < descriptor->size; i++) {
     if (filedescriptor != descriptor->fds[i].fd) continue;
     pfd = &(descriptor->fds[i]);
+    break;
   }
 
   // Assign a new pollfd if needed
@@ -64,5 +65,35 @@ FPOLL_STATUS fpoll_add(struct fpoll *descriptor, FPOLL_EVENT events, FPOLL_FD fi
 }
 
 FPOLL_STATUS fpoll_del(struct fpoll *descriptor, FPOLL_EVENT events, FPOLL_FD filedescriptor) {
+
+  // Initial alloc
+  if (!descriptor->fds) {
+    descriptor->limit = 4;
+    descriptor->fds   = calloc(descriptor->limit, sizeof(struct pollfd));
+  }
+
+  // Find the filedescriptor in the list
+  struct pollfd *pfd = NULL;
+  int i;
+  for(i = 0 ; i < descriptor->size; i++) {
+    if (filedescriptor != descriptor->fds[i].fd) continue;
+    pfd = &(descriptor->fds[i]);
+    break;
+  }
+
+  // Remove marked events
+  if (pfd) {
+    if (events & FPOLL_IN ) pfd->events &= ~POLLIN;
+    if (events & FPOLL_OUT) pfd->events &= ~POLLOUT;
+
+    // Remove fd from list if it has no events
+    if (!pfd->events) {
+      if ((i + 1) < descriptor->size) {
+        memmove(&(descriptor->fds[i]), &(descriptor->fds[i+1]), (descriptor->size - i) * sizeof(struct pollfd));
+      }
+      descriptor->size -= 1;
+    }
+  }
+
   return FPOLL_STATUS_OK;
 }
