@@ -115,8 +115,7 @@ FPOLL_STATUS fpoll_del(struct fpoll *descriptor, FPOLL_EVENT events, FPOLL_FD fi
 
   // Remove marked events
   if (pfd) {
-    if (events & FPOLL_IN ) pfd->events &= ~POLLIN;
-    if (events & FPOLL_OUT) pfd->events &= ~POLLOUT;
+    pfd->events &= ~events;
 
     // Remove fd from list if it has no events
     if (!pfd->events) {
