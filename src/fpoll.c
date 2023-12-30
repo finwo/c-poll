@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/poll.h>
 
 #include "fpoll.h"
 
@@ -23,10 +24,43 @@ FPOLL_STATUS fpoll_close(struct fpoll *descriptor) {
 }
 
 int fpoll_wait(struct fpoll *descriptor, struct fpoll_ev *evs, int max_evs, int timeout) {
+  int i, c;
+
+  // Fetch new events
+  if (!descriptor->remaining) {
+    descriptor->remaining = poll(descriptor->fds, descriptor->size, timeout);
+  }
+
+  // Handle remaining events, possibly from previous run
+  if (descriptor->remaining) {
+    c = 0;
+    for( i = 0 ; (i < descriptor->size) && (c < max_evs) ; i++ ) {
+      if (!(descriptor->fds[i].revents)) continue;
+
+      // Convert event to our standard
+      evs[c].fd = descriptor->fds[i].fd;
+      evs[c].ev = descriptor->fds[i].revents;
+
+      // Reset the origin
+      descriptor->fds[i].revents = 0;
+
+      // Iterate to the next
+      descriptor->remaining -= 1;
+      c++;
+    }
+
+    // Prevent deadlocks
+    if (i == descriptor->size) {
+      descriptor->remaining = 0;
+    }
+
+    return c;
+  }
+
   return 0;
 }
 
-FPOLL_STATUS fpoll_add(struct fpoll *descriptor, FPOLL_EVENT events, FPOLL_FD filedescriptor) {
+FPOLL_STATUS fpoll_add(struct fpoll *descriptor, FPOLL_EVENT events, FPOLL_FD filedescriptor, void *udata) {
 
   // Initial alloc
   if (!descriptor->fds) {
@@ -58,8 +92,7 @@ FPOLL_STATUS fpoll_add(struct fpoll *descriptor, FPOLL_EVENT events, FPOLL_FD fi
   }
 
   // Assign the correct events
-  if (events & FPOLL_IN) pfd->events |= POLLIN;
-  if (events & FPOLL_OUT) pfd->events |= POLLOUT;
+  pfd->events = events;
 
   return FPOLL_STATUS_OK;
 }
