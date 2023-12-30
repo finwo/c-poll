@@ -37,9 +37,9 @@ struct fpoll_ev {
 };
 
 struct fpoll * fpoll_create();
-FPOLL_STATUS   fpoll_close(struct fpoll *);
-int            fpoll_wait(struct fpoll *, struct fpoll_ev *, int max_evs, int timeout);
-FPOLL_STATUS   fpoll_add(struct fpoll *, FPOLL_EVENT, FPOLL_FD, void *udata);
-FPOLL_STATUS   fpoll_del(struct fpoll *, FPOLL_EVENT, FPOLL_FD);
+FPOLL_STATUS   fpoll_close(struct fpoll *descriptor);
+int            fpoll_wait(struct fpoll *descriptor, struct fpoll_ev *evs, int max_evs, int timeout);
+FPOLL_STATUS   fpoll_add(struct fpoll *descriptor, FPOLL_EVENT events, FPOLL_FD filedescriptor, void *udata);
+FPOLL_STATUS   fpoll_del(struct fpoll *descriptor, FPOLL_EVENT events, FPOLL_FD filedescriptor);
 
 #endif // __FINWO_POLL_H__
