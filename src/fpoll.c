@@ -6,19 +6,14 @@
 
 #include "fpoll.h"
 
-/* struct fpoll { */
-/*   struct pollfd *fds; */
-/*   int size; */
-/*   int limit; */
-/* }; */
-
 struct fpoll * fpoll_create() {
   struct fpoll *output = calloc(1, sizeof(struct fpoll));
   return output;
 }
 
 FPOLL_STATUS fpoll_close(struct fpoll *descriptor) {
-  if (descriptor->fds) free(descriptor->fds);
+  if (descriptor->fds  ) free(descriptor->fds);
+  if (descriptor->udata) free(descriptor->udata);
   free(descriptor);
   return FPOLL_STATUS_OK;
 }
@@ -38,8 +33,9 @@ int fpoll_wait(struct fpoll *descriptor, struct fpoll_ev *evs, int max_evs, int 
       if (!(descriptor->fds[i].revents)) continue;
 
       // Convert event to our standard
-      evs[c].fd = descriptor->fds[i].fd;
-      evs[c].ev = descriptor->fds[i].revents;
+      evs[c].fd    = descriptor->fds[i].fd;
+      evs[c].ev    = descriptor->fds[i].revents;
+      evs[c].udata = descriptor->udata[i];
 
       // Reset the origin
       descriptor->fds[i].revents = 0;
@@ -66,12 +62,14 @@ FPOLL_STATUS fpoll_add(struct fpoll *descriptor, FPOLL_EVENT events, FPOLL_FD fi
   if (!descriptor->fds) {
     descriptor->limit = 4;
     descriptor->fds   = calloc(descriptor->limit, sizeof(struct pollfd));
+    descriptor->udata = calloc(descriptor->limit, sizeof(void *       ));
   }
 
   // Grow alloc
   if (descriptor->limit < (descriptor->size + 1)) {
     descriptor->limit = descriptor->limit * 2;
-    descriptor->fds   = realloc(descriptor->fds, descriptor->limit);
+    descriptor->fds   = realloc(descriptor->fds  , descriptor->limit * sizeof(struct pollfd));
+    descriptor->udata = realloc(descriptor->udata, descriptor->limit * sizeof(void *       ));
   }
 
   // Find the filedescriptor in the list
@@ -85,6 +83,7 @@ FPOLL_STATUS fpoll_add(struct fpoll *descriptor, FPOLL_EVENT events, FPOLL_FD fi
 
   // Assign a new pollfd if needed
   if (!pfd) {
+    descriptor->udata[descriptor->size] = udata;
     pfd              = &(descriptor->fds[descriptor->size]);
     descriptor->size = descriptor->size + 1;
     pfd->fd          = filedescriptor;
@@ -122,7 +121,8 @@ FPOLL_STATUS fpoll_del(struct fpoll *descriptor, FPOLL_EVENT events, FPOLL_FD fi
     // Remove fd from list if it has no events
     if (!pfd->events) {
       if ((i + 1) < descriptor->size) {
-        memmove(&(descriptor->fds[i]), &(descriptor->fds[i+1]), (descriptor->size - i) * sizeof(struct pollfd));
+        memmove(&(descriptor->fds[i]  ), &(descriptor->fds[i+1]  ), (descriptor->size - i) * sizeof(struct pollfd));
+        memmove(&(descriptor->udata[i]), &(descriptor->udata[i+1]), (descriptor->size - i) * sizeof(void *       ));
       }
       descriptor->size -= 1;
     }

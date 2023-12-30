@@ -24,6 +24,7 @@
 
 struct fpoll {
   struct pollfd *fds;
+  void          **udata;
   int size;
   int limit;
   int remaining;
