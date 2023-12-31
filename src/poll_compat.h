@@ -4,7 +4,8 @@
  * poll(2) emulation for Windows
  *
  * This emulates just-enough poll functionality on Windows to work in the
- * context of this program. This is not a replacement for POSIX.1-2001 poll(2).
+ * context of this program. This is not a replacement for POSIX.1-2001 poll(2),
+ * though it may come closer than I care to admit.
  *
  * Dongsheng Song <dongsheng.song@gmail.com>
  * Brent Cook <bcook@openbsd.org>
