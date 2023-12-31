@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include <poll.h>
+#include "poll_compat.h"
 
 #ifndef FPOLL_STATUS
 #define FPOLL_STATUS        int
